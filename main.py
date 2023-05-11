@@ -1,79 +1,299 @@
 from tkinter import *
 from tkinter import filedialog
 from datetime import date
+from tkinter.ttk import Button, Label, Style , Combobox , Treeview
+import tkinter as tk
+from tkinter import Label as Label2
+from tkinter import Button as Button2
+from PIL import ImageTk, Image
+from os import listdir
 
-# Globales
-defBG = "#303030"
-defFontColor = "#E7E7E7"
+colorFondo = "#60656F"
+colorFuente = "#F7F7FF"
+tercerColor = "#279AF1"
+cuartoColor = "#C49991"
 nombreEscenario = ""
 rutaEscenario = ""
 
+class RoundedButton(tk.Canvas):
+
+    def __init__(self, master=None, text:str="", radius=30, btnforeground=colorFuente, btnbackground=colorFondo, clicked=None, *args, **kwargs):
+        super(RoundedButton, self).__init__(master, *args, **kwargs)
+        self.config(bg=self.master["bg"])
+        self.btnbackground = btnbackground
+        self.clicked = clicked
+        
+        self.radius = radius        
+        self['height']=50                   #Tamaño alto
+        self['width']=240                   #Tamaño largo
+        self['highlightthickness'] = 0      #Quitar margen canvas
+        
+        self.rect = self.round_rectangle(0, 0, 0, 0, tags="button", radius=radius, fill=btnbackground)
+        self.text = self.create_text(0, 0, text=text, tags="button", fill=btnforeground, font=("Century Gothic", 16), justify="center")
+
+        self.tag_bind("button", "<ButtonPress>", self.border)
+        self.tag_bind("button", "<ButtonRelease>", self.border)
+        self.bind("<Configure>", self.resize)
+        
+        text_rect = self.bbox(self.text)
+        if int(self["width"]) < text_rect[2]-text_rect[0]:
+            self["width"] = (text_rect[2]-text_rect[0]) + 10
+        
+        if int(self["height"]) < text_rect[3]-text_rect[1]:
+            self["height"] = (text_rect[3]-text_rect[1]) + 10
+          
+    def round_rectangle(self, x1, y1, x2, y2, radius=25, update=False, **kwargs): # if update is False a new rounded rectangle's id will be returned else updates existing rounded rect.
+        # source: https://stackoverflow.com/a/44100075/15993687
+        points = [x1+radius, y1,
+                x1+radius, y1,
+                x2-radius, y1,
+                x2-radius, y1,
+                x2, y1,
+                x2, y1+radius,
+                x2, y1+radius,
+                x2, y2-radius,
+                x2, y2-radius,
+                x2, y2,
+                x2-radius, y2,
+                x2-radius, y2,
+                x1+radius, y2,
+                x1+radius, y2,
+                x1, y2,
+                x1, y2-radius,
+                x1, y2-radius,
+                x1, y1+radius,
+                x1, y1+radius,
+                x1, y1]
+
+        if not update:
+            return self.create_polygon(points, **kwargs, smooth=True)
+        
+        else:
+            self.coords(self.rect, points)
+
+    def resize(self, event):
+        text_bbox = self.bbox(self.text)
+
+        if self.radius > event.width or self.radius > event.height:
+            radius = min((event.width, event.height))
+
+        else:
+            radius = self.radius
+
+        width, height = event.width, event.height
+
+        if event.width < text_bbox[2]-text_bbox[0]:
+            width = text_bbox[2]-text_bbox[0] + 30
+        
+        if event.height < text_bbox[3]-text_bbox[1]:  
+            height = text_bbox[3]-text_bbox[1] + 30
+        
+        self.round_rectangle(5, 5, width-5, height-5, radius, update=True)
+
+        bbox = self.bbox(self.rect)
+
+        x = ((bbox[2]-bbox[0])/2) - ((text_bbox[2]-text_bbox[0])/2)
+        y = ((bbox[3]-bbox[1])/2) - ((text_bbox[3]-text_bbox[1])/2)
+
+        self.moveto(self.text, x, y)
+
+    def border(self, event):
+        if event.type == "4":
+            self.itemconfig(self.rect, fill=cuartoColor)
+            if self.clicked is not None:
+                self.clicked()
+        else:
+            self.itemconfig(self.rect, fill=self.btnbackground)
+
+
 # Crear la root
 root = Tk()
+# Icono Aplicación
+anchoVentana = 580         #Definir medidas de ventana
+altoVentana = 420
+xVentana = root.winfo_screenwidth() // 2 - anchoVentana // 2  #Definir posición de laventana
+yVentana = root.winfo_screenheight() // 2 - altoVentana // 2
+posicion = str(anchoVentana) + "x" + str(altoVentana) + \
+    "+" + str(xVentana) + "+" + str(yVentana)
+root.geometry(posicion)
+root.resizable(False, False)    #La ventana no se puede alargar ni ensanchar
+root.title("RGM OPMA") # Reconocimiento de gestos manuales para la organización y presentación de material audiovisual
 
 # Crear menu superior
-menuBar = Menu(root)
-archivoMenu = Menu(menuBar, tearoff=0)
-ayudaMenu = Menu(menuBar, tearoff=0)
+barraMenu = Menu(root)
+escenarioMenu = Menu(barraMenu, tearoff=0)
+ayudaMenu = Menu(barraMenu, tearoff=0)
+root.config(bg=colorFondo, menu=barraMenu)
 
-archivoMenu.add_command(label="Nuevo")
-archivoMenu.add_command(label="Abrir")
-archivoMenu.add_separator()
-archivoMenu.add_command(label="Salir", command=root.quit)
+escenarioMenu.add_command(label="Nuevo")
+escenarioMenu.add_command(label="Abrir")
+escenarioMenu.add_command(label="Editar")
+escenarioMenu.add_command(label="Eliminar")
+escenarioMenu.add_separator()
+escenarioMenu.add_command(label="Salir", command=root.quit)
 
-ayudaMenu.add_command(label="Ayuda")
+#ayudaMenu.add_command(label="Ayuda")
 
-menuBar.add_cascade(label="Archivo", menu=archivoMenu)
-menuBar.add_cascade(label="Ayuda", menu=ayudaMenu)
+barraMenu.add_cascade(label="Escenarios", menu=escenarioMenu)
+#barraMenu.add_cascade(label="Ayuda", menu=ayudaMenu)
 
 # Crear funciones
-def newWindow():            # Template para nuevas ventanas
+def nuevaVentana():            # Plantilla para nuevas ventanas
     # root.withdraw()
     top2 = Toplevel()
-    top2.geometry("400x200")
+    anchoVentana = 580         #Definir medidas de ventana
+    altoVentana = 420
+    xVentana = root.winfo_screenwidth() // 2 - anchoVentana // 2  #Definir posición de la ventana
+    yVentana = root.winfo_screenheight() // 2 - altoVentana // 2
+    posicion = str(anchoVentana) + "x" + str(altoVentana) + \
+        "+" + str(xVentana) + "+" + str(yVentana)
     top2.title("root nueva")
+    top2.geometry(posicion)
     button = Button(top2, text="OK", command=top2.destroy).pack()
 
 def windowRoot():           # Ventana principal
     pass
 
-def windowHelp():           # Ventana de ayuda
-    top = Toplevel()
-    top.geometry("400x200")
-    top.config(bg=defBG)
-    top.title("Ayuda")
-    label1 = Label(top, text="Aqui debe aparecer texto o imagenes con ayuda", bg=defBG, fg=defFontColor).pack(pady=15)
-    button = Button(top, text="Cerrar", command=top.destroy).place(relx=0.4, rely=0.5)
+def siguienteImagen():
+    print("Imagen siguiente")
 
-def windowConfigScene():    # Ventana de configuracion de escenario
+def anteriorImagen():
+    print("Imagen anterior")
+
+def ventanaAyuda():           # Ventana de ayuda
     top = Toplevel()
-    top.geometry("400x200")
-    top.config(bg=defBG)
+    top.overrideredirect(True) # Quitar barra de título
+    anchoVentana = 800         #Definir medidas de ventana
+    altoVentana = 600
+    xVentana = root.winfo_screenwidth() // 2 - anchoVentana // 2  #Definir posición de la ventana
+    yVentana = root.winfo_screenheight() // 2 - altoVentana // 2
+    posicion = str(anchoVentana) + "x" + str(altoVentana) + \
+        "+" + str(xVentana) + "+" + str(yVentana)
+    top.geometry(posicion)
+    top.config(bg=colorFondo)
+    top.title("Ayuda")
+    Label(top, text="Ayuda", style="Label.TLabel" ).grid(row=0, column=0, pady=30)
+    Label(top, text="Aqui debe aparecer texto o imagenes con ayuda", style="Label2.TLabel" ).grid(row=1, column=0, columnspan=3)
+    RoundedButton(top,text="<", radius=40, btnbackground=colorFondo, btnforeground=cuartoColor, clicked=anteriorImagen).grid(row=2, column=0)
+    canv = Canvas(top, width=300, height=300, bg=colorFondo)
+    canv.grid(row=2, column=1)
+    img = ImageTk.PhotoImage(Image.open("img/gestos/2.png"))  # PIL solution
+    canv.create_image(20,20, anchor=NW, image=img)
+    RoundedButton(top,text=">", radius=40, btnbackground=colorFondo, btnforeground=cuartoColor, clicked=siguienteImagen).grid(row=2, column=2)
+    RoundedButton(top,text="Cerrar Ayuda", radius=40, btnbackground=tercerColor, btnforeground=colorFuente, clicked=top.destroy).grid(row=4, column=2, pady=50)
+
+
+def configurarEscenario():    # Ventana de configuracion de escenario
+    top = Toplevel()
+    root.geometry(posicion)
+    top.config(bg=colorFondo)
     top.title("Configura tu escenario")
 
-def windowCreateScene():
-    top = Toplevel(root)
-    top.geometry("400x200")
-    top.config(bg=defBG)
-    top.title("Crear un nuevo escenario")
+def crearEscenario():
+    # root.withdraw()
+    top = Toplevel()
+    anchoVentana = 580         #Definir medidas de ventana
+    altoVentana = 420
+    xVentana = root.winfo_screenwidth() // 2 - anchoVentana // 2  #Definir posición de la ventana
+    yVentana = root.winfo_screenheight() // 2 - altoVentana // 2
+    posicion = str(anchoVentana) + "x" + str(altoVentana) + \
+        "+" + str(xVentana) + "+" + str(yVentana)
+    top.title("root nueva")
+    top.geometry(posicion)
+    top.config(bg=colorFondo)
+    top.title("Crear escenario")
+    Label(top, text="Datos del escenario", style="Label.TLabel").grid(row=0, column=0,pady=20,padx=20)
     # frame2 = Frame(top, bd=5, relief="sunken", padx=20, pady=20).pack()
-    l1 = Label(top, 
-                     text="Nombre del escenario:", 
-                     bg=defBG, 
-                     fg=defFontColor)
-    l1.grid(row=0,column=0)
-    l2 = Label(top,
+    Label(top, 
+                     text="Nombre:", 
+                     style="Label2.TLabel").grid(row=1, column=0, padx=50, pady=20)
+    Label(top,
                      text="Fecha de creacion:", 
-                     bg=defBG, 
-                     fg=defFontColor)
-    l2.grid(row=1,column=0)
+                     style="Label2.TLabel").grid(row=2,column=0, padx=50, pady=20)
 
     nombreEscenario = StringVar()
-    e1 = Entry(top, textvariable=nombreEscenario).grid(row=0, column=1)
-    e2 = Label(top, text=date.today(), bg=defBG, fg=defFontColor).grid(row=1, column=1)
-    button = Button(top, text="Crear escenario", command=top.destroy).place(relx=0.4, rely=0.5)
+    Entry(top, textvariable=nombreEscenario).grid(row=1, column=1)
+    Label(top, text=date.today(), style="Label2.TLabel").grid(row=2, column=1)
+    RoundedButton(top,text="Crear escenario", radius=40, btnbackground=tercerColor, btnforeground=colorFuente, clicked=top.destroy).grid(row=3, column=1,pady=40)
 
-def openFile():
+def abrirEscenario():
+    # root.withdraw()
+    top = Toplevel()
+    anchoVentana = 900         #Definir medidas de ventana
+    altoVentana = 450
+    xVentana = root.winfo_screenwidth() // 2 - anchoVentana // 2  #Definir posición de la ventana
+    yVentana = root.winfo_screenheight() // 2 - altoVentana // 2
+    posicion = str(anchoVentana) + "x" + str(altoVentana) + \
+        "+" + str(xVentana) + "+" + str(yVentana)
+    top.geometry(posicion)
+    top.config(bg=colorFondo)
+    top.title("Listado de escenarios")
+    Label(top, text="Abrir Escenario", style="Label.TLabel").grid(row=0, column=0,pady=20,padx=20)
+    # frame2 = Frame(top, bd=5, relief="sunken", padx=20, pady=20).pack()
+    nombreEscenario = StringVar()
+    origen = StringVar()
+    origenDesplegar = "img/gestos"
+    origenDatos = listdir(origenDesplegar)
+
+    tabla = Treeview(top,columns=2)
+    tabla.grid(row=2, column=0,padx=80, rowspan=3)
+    tabla.heading("#0",text = "Fecha")
+    tabla.heading("#1",text = "Nombre")
+    for escenario in origenDatos:
+        tabla.insert("",0,text="Fecha",values=escenario[:-4])
+
+    Combobox (top, values = origenDatos, textvariable = origen,style="Combobox.TCombobox")
+    RoundedButton(top,text="Cambiar Origen", radius=40, btnbackground=colorFuente, btnforeground=colorFondo, clicked=top.destroy).grid(row=5, column=0,pady=10)
+    RoundedButton(top,text="Abrir", radius=40, btnbackground=tercerColor, btnforeground=colorFuente, clicked=top.destroy).grid(row=2, column=2,pady=10)
+    RoundedButton(top,text="Editar", radius=40, btnbackground=cuartoColor, btnforeground=colorFuente, clicked=editarEscenario).grid(row=3, column=2,pady=10)
+    RoundedButton(top,text="Eliminar", radius=40, btnbackground="red", btnforeground=colorFuente, clicked=top.destroy).grid(row=4, column=2,pady=10)
+
+s2 = Style()
+s2.configure('Combobox.TCombobox',
+        background = colorFondo,
+        foreground = colorFuente,
+        font=('Century Gothic', 16))
+
+def editarEscenario():
+    # root.withdraw()
+    top = Toplevel()
+    anchoVentana = 1080         #Definir medidas de ventana
+    altoVentana = 450
+    xVentana = root.winfo_screenwidth() // 2 - anchoVentana // 2  #Definir posición de la ventana
+    yVentana = root.winfo_screenheight() // 2 - altoVentana // 2
+    posicion = str(anchoVentana) + "x" + str(altoVentana) + \
+        "+" + str(xVentana) + "+" + str(yVentana)
+    top.geometry(posicion)
+    top.config(bg=colorFondo)
+    top.title("Configurar Escenario")
+    Label(top, text="Configurar Escenario", style="Label.TLabel").grid(row=0, column=0,pady=20,padx=20)
+
+    # frame2 = Frame(top, bd=5, relief="sunken", padx=20, pady=20).pack()
+    nombreEscenario = StringVar()
+    
+    tablaEscenario = Treeview(top,columns=("accion,material"))
+    tablaEscenario.grid(row=2, column=0,padx=80, rowspan=3)
+    tablaEscenario.column("#0",width=80)
+    tablaEscenario.column("accion",width=200)
+    tablaEscenario.column("material",width=300)    
+    tablaEscenario.heading("#0",text = "Fecha",anchor=CENTER)
+    tablaEscenario.heading("accion",text = "Acción",anchor=CENTER)
+    tablaEscenario.heading("material",text = "Material",anchor=CENTER)
+    origen = StringVar()
+    origenDesplegar = "img/gestos"
+    origenDatos = listdir(origenDesplegar)
+    combo = Combobox (top, values = origenDatos, textvariable = origen,style="Combobox.TCombobox")
+    RoundedButton(top,text="Agregar Acción", radius=40, btnbackground=colorFuente, btnforeground=colorFondo, clicked=agregarAccion).grid(row=2, column=1,pady=10, columnspan=2)
+    RoundedButton(top,text="Guardar Configuración", radius=40, btnbackground=cuartoColor, btnforeground=tercerColor, clicked=top.destroy).grid(row=3, column=0,pady=10)
+    RoundedButton(top,text="Abrir", radius=40, btnbackground=tercerColor, btnforeground=colorFuente, clicked=top.destroy).grid(row=3, column=1,pady=10)
+    RoundedButton(top,text="Regresar", radius=40, btnbackground="red", btnforeground=colorFuente, clicked=top.destroy).grid(row=3, column=2,pady=10)
+
+    def agregarAccion():
+        tablaEscenario.insert("",END,text= combo ,values=("2","3"))
+
+
+
+def abrirEscenario2():
     try:
         path = filedialog.askopenfilename(
             title="Abrir escenario",
@@ -84,22 +304,38 @@ def openFile():
         file = open(path, 'r')
         print (file.read())
     except:
-        print("No abriste nada")
+        print("No se abrió nada")
 
-# Configurar la root principal
-root.title("RGM OPMA") # Reconocimiento de gestos manuales para la organización y presentación de material audiovisual
-root.geometry("500x300")
-root.resizable(False,False)
-root.config(bg=defBG, menu=menuBar)
+
+
+
 
 # Crear un contenido principal
-label1 = Label(root, text="Bienvenido!", bg=defBG, fg=defFontColor).pack(pady=15)
-label2 = Label(root, text="Abre o crea un nuevo escenario para continuar:", bg=defBG, fg=defFontColor).pack()
+Label(root, text="Menú principal", style="Label.TLabel").grid(row=0, column=0,pady=20,padx=20)
+#label2 = Label(root, text="Abre o crea un nuevo escenario para continuar:", bg=colorFondo, fg=colorFuente).grid(row=1, column=1)
 
-# button1 = Button(root, text="Otra root", command=newWindow).pack()
-b2 = Button(root, text="Abrir", command=openFile).pack(pady=(50,10))
-b3 = Button(root, text="Crear", command=windowCreateScene).pack()
-b4 = Button(root, text="config", command=windowConfigScene).pack()
-b5 = Button(root, text="?", bg=defBG, fg=defFontColor, command=windowHelp).place(x=450, y=10)
+#Estilos
+s = Style()
+s.configure('Label.TLabel',
+        background = colorFondo,
+        foreground = colorFuente,
+        font=('Century Gothic', 16))
+
+s2 = Style()
+s2.configure('Label2.TLabel',
+        background = colorFondo,
+        foreground = colorFuente,
+        font=('Century Gothic', 12))
+
+
+# button1 = Button(root, text="Otra root", command=nuevaVentana).pack()
+RoundedButton(root,text="Abrir/Editar Escenario", radius=40, btnbackground=tercerColor, btnforeground=colorFuente, clicked=abrirEscenario).grid(row=2, column=1,pady=40)
+RoundedButton(root,text="Nuevo Escenario", radius=40, btnbackground=tercerColor, btnforeground=colorFuente, clicked=crearEscenario).grid(row=3, column=1)
+
+#b4 = Button(root, text="Configuración", command=configurarEscenario, style="Boton.TButton").grid(row=4, column=1, pady=6)
+
+#Label2(root, bitmap="question", background=colorFondo, foreground='white').grid(row=0, column=2,sticky=E,padx=60)
+
+b5 = RoundedButton(root, text="?", radius=40,btnbackground=colorFondo, btnforeground=colorFuente, clicked=ventanaAyuda).grid(row=0, column=2)
 
 root.mainloop()
