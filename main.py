@@ -256,9 +256,13 @@ s2.configure('Combobox.TCombobox',
 
 def editarEscenario():
     # root.withdraw()
+
+    def agregarAccion():
+        pass
+
     top = Toplevel()
-    anchoVentana = 1080         #Definir medidas de ventana
-    altoVentana = 450
+    anchoVentana = 860     #Definir medidas de ventana
+    altoVentana = 550
     xVentana = root.winfo_screenwidth() // 2 - anchoVentana // 2  #Definir posición de la ventana
     yVentana = root.winfo_screenheight() // 2 - altoVentana // 2
     posicion = str(anchoVentana) + "x" + str(altoVentana) + \
@@ -266,30 +270,72 @@ def editarEscenario():
     top.geometry(posicion)
     top.config(bg=colorFondo)
     top.title("Configurar Escenario")
-    Label(top, text="Configurar Escenario", style="Label.TLabel").grid(row=0, column=0,pady=20,padx=20)
+    Label(top, text="Configurar Escenario", style="Label.TLabel").grid(row=0, column=0,pady=20,padx=60)
 
     # frame2 = Frame(top, bd=5, relief="sunken", padx=20, pady=20).pack()
-    nombreEscenario = StringVar()
     
-    tablaEscenario = Treeview(top,columns=("accion,material"))
-    tablaEscenario.grid(row=2, column=0,padx=80, rowspan=3)
-    tablaEscenario.column("#0",width=80)
-    tablaEscenario.column("accion",width=200)
-    tablaEscenario.column("material",width=300)    
-    tablaEscenario.heading("#0",text = "Fecha",anchor=CENTER)
-    tablaEscenario.heading("accion",text = "Acción",anchor=CENTER)
-    tablaEscenario.heading("material",text = "Material",anchor=CENTER)
+    
+    lblFrame = LabelFrame(top, text=" ",background=colorFondo)
+    lblFrame.grid(row=2, column=0,padx=80, columnspan=3,sticky=EW)
+    Label(lblFrame, text="Gesto",background=colorFondo,width=20).grid(row=0, column=0)
+    Label(lblFrame, text="Acción",background=colorFondo,width=40).grid(row=0, column=1)
+    Label(lblFrame, text="Material",background=colorFondo,width=40).grid(row=0, column=2)
+
+    lblFramen = LabelFrame(lblFrame, text=" ",background=cuartoColor,border=0)
+    lblFramen.grid(row=1, column=0,columnspan=3)
+
+    def actualizarImagen(self):
+        print(gestocbb.get())
+        img = ImageTk.PhotoImage(Image.open("img/gestos/"+gestocbb.get()+".png"))  # PIL solution
+        canv.create_image(40,40, anchor=NW, image=img)    
+        pass
+
+
+    #Gesto
+
+    gestocbb = StringVar()
+    accioncbb = StringVar()
+    cbbGesto = Combobox(lblFramen, textvariable=gestocbb,width=20)
+    cbbGesto['values'] = ('1', '2', '3')
+    cbbGesto.grid(row=0, column=0)
+    cbbGesto.bind("<<ComboboxSelected>>", actualizarImagen)
+    canv = Canvas(lblFramen, width=50, height=50, bg=colorFondo)
+    canv.grid(row=1)
+    img = ImageTk.PhotoImage(Image.open("img/gestos/1.png"))  # PIL solution
+    canv.create_image(40,40, anchor=NW, image=img)
+
+    #Acción
+
+    cbbAccion = Combobox(lblFramen, textvariable=accioncbb,width=40)
+    cbbAccion['values'] = ('a', 'b', 'c')
+    cbbAccion.grid(row=0, column=1)
+    cbbAccion.bind("<<ComboboxSelected>>", actualizarImagen)
+
+    #Material
+    def selec():
+        pass
+
+    opcion = IntVar() # Como StrinVar pero en entero
+
+    Radiobutton(lblFramen, text="Archivo", variable=opcion, 
+                value=0, command=selec).grid(row=0,column=2)
+    Radiobutton(lblFramen, text="Enlace", variable=opcion,
+                value=1, command=selec).grid(row=1,column=2)
+    RoundedButton(lblFramen,text="Seleccionar", radius=40, btnbackground=cuartoColor, btnforeground=colorFuente, clicked=abrirEscenario2).grid(row=0, column=3, rowspan=2)
+
+
+
+
+
     origen = StringVar()
     origenDesplegar = "img/gestos"
     origenDatos = listdir(origenDesplegar)
     combo = Combobox (top, values = origenDatos, textvariable = origen,style="Combobox.TCombobox")
-    RoundedButton(top,text="Agregar Acción", radius=40, btnbackground=colorFuente, btnforeground=colorFondo, clicked=agregarAccion).grid(row=2, column=1,pady=10, columnspan=2)
-    RoundedButton(top,text="Guardar Configuración", radius=40, btnbackground=cuartoColor, btnforeground=tercerColor, clicked=top.destroy).grid(row=3, column=0,pady=10)
-    RoundedButton(top,text="Abrir", radius=40, btnbackground=tercerColor, btnforeground=colorFuente, clicked=top.destroy).grid(row=3, column=1,pady=10)
-    RoundedButton(top,text="Regresar", radius=40, btnbackground="red", btnforeground=colorFuente, clicked=top.destroy).grid(row=3, column=2,pady=10)
-
-    def agregarAccion():
-        tablaEscenario.insert("",END,text= combo ,values=("2","3"))
+    RoundedButton(top,text="Agregar Acción",        radius=40, btnbackground=colorFuente, btnforeground=colorFondo, clicked=agregarAccion).grid(row=3, column=1,pady=10)
+    RoundedButton(top,text="Guardar", radius=40, btnbackground=tercerColor, btnforeground=colorFuente, clicked=top.destroy).grid(row=4, column=0,pady=40)
+    RoundedButton(top,text="Abrir",                 radius=40, btnbackground=tercerColor, btnforeground=colorFuente, clicked=top.destroy).grid(row=4, column=1,pady=10)
+    RoundedButton(top,text="Regresar",              radius=40, btnbackground="red", btnforeground=colorFuente,       clicked=top.destroy).grid(row=4, column=2,pady=10)
+    
 
 
 
@@ -305,7 +351,6 @@ def abrirEscenario2():
         print (file.read())
     except:
         print("No se abrió nada")
-
 
 
 
